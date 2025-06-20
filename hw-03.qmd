@@ -82,6 +82,72 @@ income_clean |>
 
 ## 3 - COVID survey - reconstruct
 
+```{r Q3 load data}
+#| label: load data
+
+covid <- read.csv(here("data", "covid-survey.csv"), skip = 1)
+dim(covid)
+```
+```{r Q3 Data cleaning}
+#| label: Q3 Data Cleaning
+
+covid <- clean_names(covid)
+covid <- covid |>
+  filter(if_any(-1, ~ !is.na(.))) #*
+dim(covid)
+```
+* Code after consulting with https://www.tidyverse.org/blog/2021/02/dplyr-1-0-4-if-any/. -1 from my own code, '~ !is.na(.)' formatting consulted from AI after multiple bug issues.
+
+```{r Q3 renaming variables}
+#| label: renaming variables
+
+covid_survey <- covid |>
+  mutate(
+    "exp_already_vax" = if_else(exp_already_vax == 0, "No", "Yes"),
+    "exp_flu_vax" = if_else(exp_flu_vax == 0, "No", "Yes"),
+    "exp_profession" = if_else(exp_profession == 0, "Medical", "Nursing"),
+    "exp_gender" = case_when(
+      exp_gender == 0 ~ "Male",
+      exp_gender == 1 ~ "Female",
+      exp_gender == 3 ~ "Non-binary third gender",
+      exp_gender == 4 ~ "Prefer not to say",
+    ),
+    "exp_race" = case_when(
+      exp_race == 1 ~ "American Indian/Alaskan Native",
+      exp_race == 2 ~ "Asian",
+      exp_race == 3 ~ "Black/African American",
+      exp_race == 4 ~ "Native Hawaiian/Other Pacific Islander",
+      exp_race == 5 ~ "White"
+    ),
+    "exp_ethnicity" = if_else(exp_ethnicity == 1, "Hispanic/Latino", "Non-Hispanic/Non-Latino"),
+    "exp_age_bin" = case_when(
+      exp_age_bin == 0 ~ "<20",
+      exp_age_bin == 20 ~ "21-25",
+      exp_age_bin == 25 ~ "26-30",
+      exp_age_bin == 30 ~ ">30"
+    )
+  )
+dim(covid_survey)
+```
+
+```{r pivot longer Q3 code given}
+#| label: pivot longer Q3 code given
+
+covid_survey_longer <- covid_survey |>
+  pivot_longer(
+    cols = starts_with("exp_"),
+    names_to = "explanatory",
+    values_to = "explanatory_value"
+  ) |>
+  filter(!is.na(explanatory_value)) |>
+  pivot_longer(
+    cols = starts_with("resp_"),
+    names_to = "response",
+    values_to = "response_value"
+  )
+covid_survey_longer
+```
+
 
 ## 4 - COVID survey - re-reconstruct
 
