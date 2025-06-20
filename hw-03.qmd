@@ -15,7 +15,7 @@ toc: true
 if (!require("pacman"))
   install.packages("pacman")
 
-pacman::p_load(tidyverse, here, glue, scales, janitor)
+pacman::p_load(tidyverse, here, glue, scales, janitor, forcats)
 
 ggplot2::theme_set(ggplot2::theme_minimal())
 options(width = 65)
@@ -42,7 +42,22 @@ glimpse(income)
 #pivots the table so that it creates two new columns, one for spending type and one for the amount
 income_clean <- income|>
   pivot_longer(cols = -c(class, average_income), names_to = "spending_type", values_to = "amount")
-glimpse(income_clean)
+
+income_clean$class <- fct_relevel(
+  income_clean$class,
+  "$1000 AND OVER", 
+  "$750-1000", 
+  "$500-750", 
+  "$400-500", 
+  "$300-400", 
+  "$200-300", 
+  "$100-200"
+)
+
+income_clean$spending_type <- fct_relevel(
+  income_clean$spending_type,
+  "other", "tax", "clothes", "food", "rent"
+)
 ```
 
 
@@ -50,10 +65,10 @@ glimpse(income_clean)
 #| label: du bois recreation
 
 income_clean |>
-  ggplot(aes(x = class, y = amount, fill = spending_type)) +
+  ggplot(aes(x = class, y = amount, fill = spending_type, order = spending_type)) +
   geom_bar(stat = "identity", position = "fill") +
   coord_flip() +
-  scale_fill_manual(values = c("pink","purple","grey", "black", "skyblue"))
+  scale_fill_manual(values = c("grey","lightblue","pink", "#966FD6", "grey10")) 
 
 ```
 
