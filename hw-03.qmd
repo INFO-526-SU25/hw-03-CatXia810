@@ -1,6 +1,6 @@
 ---
 title: "HW 03"
-author: "INSERT YOUR NAME HERE"
+author: "Cat Xia"
 format:
   html:
     embed-resources: true
@@ -9,10 +9,54 @@ toc: true
 
 ## 1 - Du Bois challenge.
 
-```{r}
-#| label: label-me-1
+```{r loading packages}
+#| label: loading packages
+
+if (!require("pacman"))
+  install.packages("pacman")
+
+pacman::p_load(tidyverse, here, glue, scales, janitor)
+
+ggplot2::theme_set(ggplot2::theme_minimal())
+options(width = 65)
+knitr::opts_chunk$set(
+  fig.width = 7,
+  fig.asp = 0.618,
+  fig.retina = 3,
+  fig.align = "center",
+  api = 300
+)
 
 ```
+
+```{r load data}
+#| label: load data
+
+income <- read.csv(here("data", "income.csv"))
+income <- clean_names(income)
+glimpse(income)
+```
+```{r du bois data wrangling}
+#| label: du bois data wrangling
+
+#pivots the table so that it creates two new columns, one for spending type and one for the amount
+income_clean <- income|>
+  pivot_longer(cols = -c(class, average_income), names_to = "spending_type", values_to = "amount")
+glimpse(income_clean)
+```
+
+
+```{r du bois recreation}
+#| label: du bois recreation
+
+income_clean |>
+  ggplot(aes(x = class, y = amount, fill = spending_type)) +
+  geom_bar(stat = "identity", position = "fill") +
+  coord_flip() +
+  scale_fill_manual(values = c("pink","purple","grey", "black", "skyblue"))
+
+```
+
 
 ## 2 - COVID survey - interpret
 
