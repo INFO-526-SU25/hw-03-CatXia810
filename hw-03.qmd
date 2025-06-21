@@ -104,14 +104,18 @@ dim(covid)
 covid_survey <- covid |>
   mutate(
     "exp_already_vax" = if_else(exp_already_vax == 0, "No", "Yes"),
+    
     "exp_flu_vax" = if_else(exp_flu_vax == 0, "No", "Yes"),
+    
     "exp_profession" = if_else(exp_profession == 0, "Medical", "Nursing"),
+    
     "exp_gender" = case_when(
       exp_gender == 0 ~ "Male",
       exp_gender == 1 ~ "Female",
       exp_gender == 3 ~ "Non-binary third gender",
       exp_gender == 4 ~ "Prefer not to say",
     ),
+    
     "exp_race" = case_when(
       exp_race == 1 ~ "American Indian/Alaskan Native",
       exp_race == 2 ~ "Asian",
@@ -119,16 +123,23 @@ covid_survey <- covid |>
       exp_race == 4 ~ "Native Hawaiian/Other Pacific Islander",
       exp_race == 5 ~ "White"
     ),
+    
     "exp_ethnicity" = if_else(exp_ethnicity == 1, "Hispanic/Latino", "Non-Hispanic/Non-Latino"),
-    "exp_age_bin" = case_when(
+    
+    "exp_age_bin" = factor(case_when(
       exp_age_bin == 0 ~ "<20",
       exp_age_bin == 20 ~ "21-25",
       exp_age_bin == 25 ~ "26-30",
-      exp_age_bin == 30 ~ ">30"
-    )
+      exp_age_bin == 30 ~ ">30"),
+      
+      levels = c("<20", "21-25", "26-30", ">30")), #*
+    
+    "response_id" = as.double(response_id)
   )
+
 dim(covid_survey)
 ```
+* http://www.cookbook-r.com/Manipulating_data/Changing_the_order_of_levels_of_a_factor/
 
 ```{r pivot longer Q3 code given}
 #| label: pivot longer Q3 code given
@@ -145,9 +156,36 @@ covid_survey_longer <- covid_survey |>
     names_to = "response",
     values_to = "response_value"
   )
-covid_survey_longer
+glimpse(covid_survey_longer)
 ```
+The first pivot longer is taking all the explanatory values (ie background info) and puting it in explanatory_value while the second pivot longer is taking all the reponses and puting them under response_value.
 
+```{r Q3 grouping}
+#| label: Q3 grouping
+
+covid_survey_summary_stats_by_group <- covid_survey_longer |>
+  group_by(explanatory, explanatory_value, response) |>
+  summarise(mean = mean(response_value, na.rm = TRUE),
+            low = quantile(response_value, probs = 0.1, na.rm = TRUE), #*
+            high = quantile(response_value, probs = 0.9, na.rm = TRUE))
+
+covid_survey_summary_stats_by_group
+```
+*https://www.tidyverse.org/blog/2020/03/dplyr-1-0-0-summarise/
+
+```{r Q3 summary not grouped}
+#| label: summary not grouped Q3
+
+covid_survey_summary_stats_all <- covid_survey_longer |>
+  group_by(response, .drop = FALSE) |>
+  summarise(mean = mean(response_value, na.rm = TRUE),
+            low = quantile(response_value, probs = 0.1, na.rm = TRUE), #*
+            high = quantile(response_value, probs = 0.9, na.rm = TRUE),
+            across()) #*
+
+covid_survey_summary_stats_all
+```
+* https://stackoverflow.com/questions/39092110/r-dplyr-summarize-and-retain-other-columns
 
 ## 4 - COVID survey - re-reconstruct
 
