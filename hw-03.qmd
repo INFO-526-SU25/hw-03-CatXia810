@@ -169,9 +169,12 @@ covid_survey_summary_stats_by_group <- covid_survey_longer |>
             low = quantile(response_value, probs = 0.1, na.rm = TRUE), #*
             high = quantile(response_value, probs = 0.9, na.rm = TRUE))
 
+covid_survey_summary_stats_by_group <- covid_survey_summary_stats_by_group[order(covid_survey_summary_stats_by_group$explanatory_value),] #**
+
 covid_survey_summary_stats_by_group
 ```
 *https://www.tidyverse.org/blog/2020/03/dplyr-1-0-0-summarise/
+**https://bookdown.org/ndphillips/YaRrr/order-sorting-data.html 
 
 ```{r Q3 summary not grouped}
 #| label: summary not grouped Q3
@@ -179,13 +182,35 @@ covid_survey_summary_stats_by_group
 covid_survey_summary_stats_all <- covid_survey_longer |>
   group_by(response, .drop = FALSE) |>
   summarise(mean = mean(response_value, na.rm = TRUE),
-            low = quantile(response_value, probs = 0.1, na.rm = TRUE), #*
+            low = quantile(response_value, probs = 0.1, na.rm = TRUE), 
             high = quantile(response_value, probs = 0.9, na.rm = TRUE),
-            across()) #*
+            explanatory = "ALL",
+            explanatory_value = factor(""),
+            .groups = "drop"
+            ) 
 
 covid_survey_summary_stats_all
 ```
-* https://stackoverflow.com/questions/39092110/r-dplyr-summarize-and-retain-other-columns
+
+```{r Q3 binding together two df}
+#| label: binding together summary stats all and by group
+
+covid_survey_summary_stats <- rbind(covid_survey_summary_stats_all, covid_survey_summary_stats_by_group) #*
+
+covid_survey_summary_stats
+```
+
+*https://www.datacamp.com/doc/r/merging 
+
+```{r Q3 recreating the graph}
+#| label: recreating the graph for Q2
+
+covid_survey_summary_stats |>
+  ggplot(aes(x = mean, y = explanatory_value)) +
+  geom_point() +
+  facet_grid(cols = vars(response))
+```
+
 
 ## 4 - COVID survey - re-reconstruct
 
