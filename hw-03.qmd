@@ -75,10 +75,9 @@ income_clean |>
 
 ## 2 - COVID survey - interpret
 
-```{r}
-#| label: label-me-2
+This graph is showing the the answers for each of the 6 questions regarding vaccines ("Vaccines are safe", "Vaccines make me feel safer at work", "Concern over Vaccine Side Effects", "Vaccine vetting process confidence", "vaccine information is trustworthy", and "I recommend the vaccine") for different identities from Age, Gender, Race, Ethnicity, Profession, or any prior vaccine experience for Covid and/or the flu. Starting from the top, for All data, most people tend to strongly agree on all questions regarding the vaccine except for "side effects" which is neutral. For age, there seems to be a trend where older people (>30) are more likely to believe in the vaccine and are closer to 1. Surprisingly, there was not a huge difference in gender across the 4 different options, with the exception of Non-binary, where the vaccine was more likely to be believed as less safe but also more likely to not be as concerned about the side effects as male or female respondents. As race goes, Native Hawaiian/Pacific Islander and White respondents are more likely to have doubts about the vaccine. Both Hispanic and non-hispanic respondents were fairly equal. Surprisingly, nursing and medical professions had concerns over the side effects of the vaccine at a higher level than a good portion of the other population. Additionally, those who had had the vaccine were more wary of side effects, but those who haven't were much more generally doubtful, for both the COVID and Flu vaccine.
 
-```
+From my initial response, I agree with the graph in that those who haven't had vaccines this year are more likely to express higher levels of doubt around the covid vaccine for Flu and Covid. My intuition disagrees with the Nursing and Medical professions having significant doubts about the side effects, but more specifically how there are no other professions to compare to. I could be interpreting this response incorrect, and it may be something like "the profession that gives you the vaccine", although I am unsure. Lastly, I also thought that younger people from <20 to 25 were more accepting of the vaccine and my intuition also disagrees with them having seemingly some of the greater concerns regarding the safety and side effects.
 
 ## 3 - COVID survey - reconstruct
 
@@ -208,7 +207,8 @@ covid_survey_summary_stats
 covid_survey_summary_stats |>
   ggplot(aes(x = mean, y = explanatory_value)) +
   geom_point() +
-  facet_grid(cols = vars(response))
+  facet_grid(cols = vars(response)) +
+  theme_minimal()
 ```
 
 
