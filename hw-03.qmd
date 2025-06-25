@@ -43,6 +43,7 @@ glimpse(income)
 income_clean <- income|>
   pivot_longer(cols = -c(class, average_income), names_to = "spending_type", values_to = "amount")
 
+#creates a order for the income to be in, fct_relevel consulted with documentation
 income_clean$class <- fct_relevel(
   income_clean$class,
   "$1000 AND OVER", 
@@ -54,6 +55,7 @@ income_clean$class <- fct_relevel(
   "$100-200"
 )
 
+#changes the order so it better adheres to the original graph
 income_clean$spending_type <- fct_relevel(
   income_clean$spending_type,
   "other", "tax", "clothes", "food", "rent"
@@ -64,10 +66,17 @@ income_clean$spending_type <- fct_relevel(
 ```{r du bois recreation}
 #| label: du bois recreation
 
+#creates a bar graph for each income level by amount, colored by spending
 income_clean |>
   ggplot(aes(x = class, y = amount, fill = spending_type, order = spending_type)) +
+  
+  #creates a bar graph where the y values are given by their identity
   geom_bar(stat = "identity", position = "fill") +
+  
+  #flips the graph sideways
   coord_flip() +
+  
+  #colored with values closer to the original, though more saturated for ease of differentiation
   scale_fill_manual(values = c("grey","lightblue","pink", "#966FD6", "grey10")) 
 
 ```
@@ -90,8 +99,10 @@ dim(covid)
 ```{r Q3 Data cleaning}
 #| label: Q3 Data Cleaning
 
+#cleans the row names
 covid <- clean_names(covid)
 covid <- covid |>
+  #filters out the first row so that the second row can be the names of the col
   filter(if_any(-1, ~ !is.na(.))) #*
 dim(covid)
 ```
@@ -101,6 +112,8 @@ dim(covid)
 #| label: renaming variables
 
 covid_survey <- covid |>
+  
+  #changes all the col values in accordance with directions
   mutate(
     "exp_already_vax" = if_else(exp_already_vax == 0, "No", "Yes"),
     
@@ -125,6 +138,7 @@ covid_survey <- covid |>
     
     "exp_ethnicity" = if_else(exp_ethnicity == 1, "Hispanic/Latino", "Non-Hispanic/Non-Latino"),
     
+    #age changed to factor so it can be easily ordered.
     "exp_age_bin" = factor(case_when(
       exp_age_bin == 0 ~ "<20",
       exp_age_bin == 20 ~ "21-25",
@@ -133,6 +147,7 @@ covid_survey <- covid |>
       
       levels = c("<20", "21-25", "26-30", ">30")), #*
     
+    #response changed to double to appear close to reference dataframe
     "response_id" = as.double(response_id)
   )
 
@@ -143,13 +158,18 @@ dim(covid_survey)
 ```{r pivot longer Q3 code given}
 #| label: pivot longer Q3 code given
 
+#creates a new column with the pivoted explanatory values. The row titles goes in explanatory, the row values go in explanatory values.
 covid_survey_longer <- covid_survey |>
   pivot_longer(
     cols = starts_with("exp_"),
     names_to = "explanatory",
     values_to = "explanatory_value"
   ) |>
+  
+  #filters out NA values
   filter(!is.na(explanatory_value)) |>
+  
+  #creates a new column with all the response values. The row titles go in reponse, the values in response values.
   pivot_longer(
     cols = starts_with("resp_"),
     names_to = "response",
@@ -157,20 +177,22 @@ covid_survey_longer <- covid_survey |>
   )
 glimpse(covid_survey_longer)
 ```
-The first pivot longer is taking all the explanatory values (ie background info) and puting it in explanatory_value while the second pivot longer is taking all the response and putting them under response_value.
+The first pivot longer is taking all the explanatory values (ie background info) and putting it in explanatory_value while the second pivot longer is taking all the response and putting them under response_value.
 
 ```{r Q3 grouping}
 #| label: Q3 grouping
 
+#creates a tibble that has the mean, 10 quantile, and 90 quantile for each group and response.
 covid_survey_summary_stats_by_group <- covid_survey_longer |>
   group_by(explanatory, explanatory_value, response) |>
   summarise(mean = mean(response_value, na.rm = TRUE),
             low = quantile(response_value, probs = 0.1, na.rm = TRUE), #*
             high = quantile(response_value, probs = 0.9, na.rm = TRUE))
 
+#reorders the group so that it can be graphed nicely
 covid_survey_summary_stats_by_group <- covid_survey_summary_stats_by_group[order(covid_survey_summary_stats_by_group$explanatory_value),] #**
 
-covid_survey_summary_stats_by_group
+glimpse(covid_survey_summary_stats_by_group)
 ```
 *https://www.tidyverse.org/blog/2020/03/dplyr-1-0-0-summarise/
 **https://bookdown.org/ndphillips/YaRrr/order-sorting-data.html 
@@ -178,6 +200,7 @@ covid_survey_summary_stats_by_group
 ```{r Q3 summary not grouped}
 #| label: summary not grouped Q3
 
+#creates the mean, 10 quantile, 90 quantile, explanatory and explanatory placement values for all of the data
 covid_survey_summary_stats_all <- covid_survey_longer |>
   group_by(response, .drop = FALSE) |>
   summarise(mean = mean(response_value, na.rm = TRUE),
@@ -194,6 +217,7 @@ covid_survey_summary_stats_all
 ```{r Q3 binding together two df}
 #| label: binding together summary stats all and by group
 
+#puts the two dataframes together
 covid_survey_summary_stats <- rbind(covid_survey_summary_stats_all, covid_survey_summary_stats_by_group) #*
 
 covid_survey_summary_stats
@@ -203,9 +227,11 @@ covid_survey_summary_stats
 ```{r specifing the order of explanatory for easier faceting + facet titles}
 #| label: specifying order of explanatory row for easier faceting + facet titles
 
+#reordering explanatory so that it can be better graphed in order
 covid_survey_summary_stats$explanatory <- factor(covid_survey_summary_stats$explanatory,
       levels = c("ALL", "exp_age_bin", "exp_gender", "exp_race", "exp_ethnicity", "exp_profession", "exp_already_vax", "exp_flu_vax"))
 
+#to be labeled on the graph
 questions <- c("resp_safety" = "Based on my understanding, I believe the vaccine is safe",
                "resp_feel_safe_at_work" = "Getting the vaccine will make me feel safer at work", 
                "resp_concern_safety" = "I am concerned about the safety and side effects of the vaccine",
@@ -213,6 +239,7 @@ questions <- c("resp_safety" = "Based on my understanding, I believe the vaccine
                "resp_trust_info" = "I trust the information that I have recieved about the vaccine", 
                "resp_will_recommend" = "I will recommend the vaccine to family, friends, and community members")
 
+#to be labeled on the graph
 id_info <- c("ALL" = "All", 
              "exp_age_bin" = "Age", 
              "exp_gender" = "Gender", 
@@ -226,6 +253,7 @@ id_info <- c("ALL" = "All",
 
 ```{r Q3 recreating the graph}
 #| label: recreating the graph for Q2
+
 
 covid_survey_summary_stats |>
   ggplot(aes(x = mean, y = explanatory_value)) +
