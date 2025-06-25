@@ -75,7 +75,7 @@ income_clean |>
 
 ## 2 - COVID survey - interpret
 
-This graph is showing the the answers for each of the 6 questions regarding vaccines ("Vaccines are safe", "Vaccines make me feel safer at work", "Concern over Vaccine Side Effects", "Vaccine vetting process confidence", "vaccine information is trustworthy", and "I recommend the vaccine") for different identities from Age, Gender, Race, Ethnicity, Profession, or any prior vaccine experience for Covid and/or the flu. Starting from the top, for All data, most people tend to strongly agree on all questions regarding the vaccine except for "side effects" which is neutral. For age, there seems to be a trend where older people (>30) are more likely to believe in the vaccine and are closer to 1. Surprisingly, there was not a huge difference in gender across the 4 different options, with the exception of Non-binary, where the vaccine was more likely to be believed as less safe but also more likely to not be as concerned about the side effects as male or female respondents. As race goes, Native Hawaiian/Pacific Islander and White respondents are more likely to have doubts about the vaccine. Both Hispanic and non-hispanic respondents were fairly equal. Surprisingly, nursing and medical professions had concerns over the side effects of the vaccine at a higher level than a good portion of the other population. Additionally, those who had had the vaccine were more wary of side effects, but those who haven't were much more generally doubtful, for both the COVID and Flu vaccine.
+This graph is showing the the answers for each of the 6 questions regarding vaccines ("Vaccines are safe", "Vaccines make me feel safer at work", "Concern over Vaccine Side Effects", "Vaccine vetting process confidence", "vaccine information is trustworthy", and "I recommend the vaccine") for different identities from Age, Gender, Race, Ethnicity, Profession, or any prior vaccine experience for Covid and/or the flu. Starting from the top, for All data, most people tend to strongly agree on all questions regarding the vaccine except for "side effects" which is neutral. For age, there seems to be a trend where older people (>30) are more likely to believe in the vaccine and are closer to 1. Surprisingly, there was not a huge difference in gender across the 4 different options, with the exception of Non-binary, where the vaccine was more likely to be believed as less safe but also more likely to not be as concerned about the side effects as male or female respondents. As race goes, Native Hawaiian/Pacific Islander and White respondents are more likely to have doubts about the vaccine. Both Hispanic and non-hispanic respondents were fairly equal. Surprisingly, nursing and medical professions had concerns over the side effects of the vaccine at a higher level than a good portion of the other population. Additionally, those who had had the vaccine were more wary of side effects, but those who haven't were much more generally doubtful, for both the COVID and Flu vaccine. Across the board, the question on vaccine safety and side effects garnered more varied responses than the others (much smaller error bars).
 
 From my initial response, I agree with the graph in that those who haven't had vaccines this year are more likely to express higher levels of doubt around the covid vaccine for Flu and Covid. My intuition disagrees with the Nursing and Medical professions having significant doubts about the side effects, but more specifically how there are no other professions to compare to. I could be interpreting this response incorrect, and it may be something like "the profession that gives you the vaccine", although I am unsure. Lastly, I also thought that younger people from <20 to 25 were more accepting of the vaccine and my intuition also disagrees with them having seemingly some of the greater concerns regarding the safety and side effects.
 
@@ -157,7 +157,7 @@ covid_survey_longer <- covid_survey |>
   )
 glimpse(covid_survey_longer)
 ```
-The first pivot longer is taking all the explanatory values (ie background info) and puting it in explanatory_value while the second pivot longer is taking all the reponses and puting them under response_value.
+The first pivot longer is taking all the explanatory values (ie background info) and puting it in explanatory_value while the second pivot longer is taking all the response and putting them under response_value.
 
 ```{r Q3 grouping}
 #| label: Q3 grouping
@@ -268,7 +268,7 @@ covid_survey_summary_stats_by_group2 <- covid_survey_longer |>
             low = quantile(response_value, probs = 0.25, na.rm = TRUE), 
             high = quantile(response_value, probs = 0.75, na.rm = TRUE))
 
-covid_survey_summary_stats_by_grou2 <- covid_survey_summary_stats_by_group2[order(covid_survey_summary_stats_by_group2$explanatory_value),]
+covid_survey_summary_stats_by_group2 <- covid_survey_summary_stats_by_group2[order(covid_survey_summary_stats_by_group2$explanatory_value),]
 
 covid_survey_summary_stats_all2 <- covid_survey_longer |>
   group_by(response, .drop = FALSE) |>
@@ -319,7 +319,94 @@ covid_survey_summary_stats2 |>
     axis.text.x = element_text(size = 8)
   )
 ```
+The graph with 25th and 75th quartile error bars reaffirms that safety of the vaccine and vaccine side effects have the greatest diversity of answers, while the other ones tend to be much closer to 1 or 2, meaning people approved of the vaccine more in those areas. The differences in Age also seem to be diminished with the smaller quartiles as well as the differences in Nursing and Medical. The differences between having taken or not taken the COVID vaccine are still quite distinct, which makes sense, but the differences in Flu vaccine got smaller.
 
 ## 5 - COVID survey - another view
 
+```{r}
+covid_response <- covid_survey[, c(9, 10, 11, 12, 13, 14)] #*
+resp_only <- covid_response |>
+  pivot_longer(
+    cols = starts_with("resp"),
+    names_to = "question",
+    values_to = "score",
+  )
 
+resp_only <- na.omit(resp_only) #**
+
+```
+*https://www.datacamp.com/tutorial/subsets-in-r
+**https://bookdown.org/rwnahhas/IntroToR/exclude-observations-with-missing-data.html 
+
+The Code chunk below and the diverging graph it generates was done following the guide made by https://rfortherestofus.com/2021/10/diverging-bar-chart 
+```{r}
+resp_only_sum <- resp_only |>
+  group_by(question, score) %>%
+  count(name = "n_answers") |>
+  group_by(question) |>
+  mutate(percent_answers = n_answers/sum(n_answers)) |>
+  ungroup() |>
+  mutate(percent_answers_label = percent(percent_answers, accuracy = 1),
+         score_fill = as.character(score))
+
+resp_diverging <- resp_only_sum |>
+  mutate(percent_answers_neg = if_else(score <=3, percent_answers, -percent_answers)) |>
+  mutate(percent_answers_label = percent(percent_answers, accuracy = 1))
+resp_diverging
+```
+
+
+```{r}
+resp_diverging|>
+  ggplot(aes(x = question, y = percent_answers_neg, fill = score_fill)) +
+  geom_col() +
+  
+  #unable to get the text below to work without being on top of each other
+  geom_text(aes(label = percent_answers_label),
+            position = position_stack(vjust = 0.5)) +
+  
+  coord_flip() +
+  theme_minimal() +
+  scale_fill_manual(values = c("#30c878", "#7CFC00", "skyblue", "#D2042D", "#953553")) +
+  scale_x_discrete(labels = label_wrap(25)(questions)) +
+  labs(
+    title = "Percent response to COVID Vaccine Questions",
+    y = "Score",
+    x = NULL,
+    fill = "Score Out of 5:") +
+  theme_minimal() +
+  theme(
+    panel.grid = element_blank(),
+    axis.ticks = element_blank(),
+    axis.text.x = element_blank(),
+    legend.position = "top"
+  ) 
+```
+
+```{r}
+resp_only_sum|>
+  ggplot(aes(x = question, y = percent_answers, fill = score_fill)) +
+  geom_col() +
+  
+  #unable to get the text below to work without being on top of each other
+  geom_text(aes(label = percent_answers_label),
+            position = position_stack(vjust = 0.5)) +
+  
+  coord_flip() +
+  theme_minimal() +
+  scale_fill_manual(values = c("#30c878", "#7CFC00", "skyblue", "#D2042D", "#953553")) +
+  scale_x_discrete(labels = label_wrap(25)(questions)) +
+  labs(
+    title = "Percent response to COVID Vaccine Questions",
+    y = "Score",
+    x = NULL,
+    fill = "Score Out of 5:") +
+  theme_minimal() +
+  theme(
+    panel.grid = element_blank(),
+    axis.ticks = element_blank(),
+    axis.text.x = element_blank(),
+    legend.position = "top"
+  ) 
+```
+C. The graphs in a and b differ in that graph a is able to allow the view to better compare between responses (negative responses together and positive responses together). On the other hand, graph b allows the viewer to compare the percent makeup of each answer and which ones score more positive overall, and if not, how they break down.
