@@ -15,7 +15,7 @@ toc: true
 if (!require("pacman"))
   install.packages("pacman")
 
-pacman::p_load(tidyverse, here, glue, scales, janitor, forcats)
+pacman::p_load(tidyverse, here, glue, scales, janitor, forcats, ggrepel)
 
 ggplot2::theme_set(ggplot2::theme_minimal())
 options(width = 65)
@@ -200,17 +200,62 @@ covid_survey_summary_stats
 ```
 
 *https://www.datacamp.com/doc/r/merging 
+```{r specifing the order of explanatory for easier faceting + facet titles}
+#| label: specifying order of explanatory row for easier faceting + facet titles
+
+covid_survey_summary_stats$explanatory <- factor(covid_survey_summary_stats$explanatory,
+      levels = c("ALL", "exp_age_bin", "exp_gender", "exp_race", "exp_ethnicity", "exp_profession", "exp_already_vax", "exp_flu_vax"))
+
+questions <- c("resp_safety" = "Based on my understanding, I believe the vaccine is safe",
+               "resp_feel_safe_at_work" = "Getting the vaccine will make me feel safer at work", 
+               "resp_concern_safety" = "I am concerned about the safety and side effects of the vaccine",
+               "resp_confidence_science" = "I am confident in the scientific vetting process for the new COVID vaccines",
+               "resp_trust_info" = "I trust the information that I have recieved about the vaccine", 
+               "resp_will_recommend" = "I will recommend the vaccine to family, friends, and community members")
+
+id_info <- c("ALL" = "All", 
+             "exp_age_bin" = "Age", 
+             "exp_gender" = "Gender", 
+             "exp_race" = "Race", 
+             "exp_ethnicity" = "Ethnicity", 
+             "exp_profession" = "Profession",
+             "exp_already_vax" = "Had COVID vaccine", 
+             "exp_flu_vax" = "Had flu vaccine this year")
+```
+
 
 ```{r Q3 recreating the graph}
 #| label: recreating the graph for Q2
 
 covid_survey_summary_stats |>
   ggplot(aes(x = mean, y = explanatory_value)) +
-  geom_point() +
-  facet_grid(cols = vars(response)) +
-  theme_minimal()
+  geom_errorbar(aes(xmin = low, xmax = high), width = 0.5) + #from documentation
+  geom_point(size = 1) +
+  facet_grid(cols = vars(response), 
+             rows = vars(explanatory), 
+             scales = "free_y", 
+             space = "free_y",
+             labeller = labeller(explanatory = as_labeller(id_info, default = label_wrap_gen(width = 10)),
+                                 response = as_labeller(questions, default = label_wrap_gen(width = 14))
+                                 )) +
+  labs(
+    x = "Mean Likert score \n (Error bars range from 10th to 90th percentile)",
+    y = NULL
+  ) +
+  scale_y_discrete(expand = c(0.1, 0.3)) + #*
+  theme_bw() +
+  theme(
+    strip.text.x = element_text(size = 8, lineheight = 0.8),
+    strip.text.y = element_text(size = 8, lineheight = 0.8, angle = 0),
+    panel.grid = element_blank(),
+    panel.border = element_blank(),
+    axis.ticks = element_blank(),
+    axis.title.x = element_text(size = 8),
+    axis.text.y = element_text(size = 8),
+    axis.text.x = element_text(size = 8)
+  )
 ```
-
+* https://stackoverflow.com/questions/15400486/change-distance-between-x-axis-ticks-in-ggplot2 
 
 ## 4 - COVID survey - re-reconstruct
 
