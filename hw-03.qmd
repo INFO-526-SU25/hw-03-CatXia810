@@ -259,4 +259,67 @@ covid_survey_summary_stats |>
 
 ## 4 - COVID survey - re-reconstruct
 
+```{r Q4 recreate summary stats}
+#| label: Q4 recreate summary stats
+
+covid_survey_summary_stats_by_group2 <- covid_survey_longer |>
+  group_by(explanatory, explanatory_value, response) |>
+  summarise(mean = mean(response_value, na.rm = TRUE),
+            low = quantile(response_value, probs = 0.25, na.rm = TRUE), 
+            high = quantile(response_value, probs = 0.75, na.rm = TRUE))
+
+covid_survey_summary_stats_by_grou2 <- covid_survey_summary_stats_by_group2[order(covid_survey_summary_stats_by_group2$explanatory_value),]
+
+covid_survey_summary_stats_all2 <- covid_survey_longer |>
+  group_by(response, .drop = FALSE) |>
+  summarise(mean = mean(response_value, na.rm = TRUE),
+            low = quantile(response_value, probs = 0.25, na.rm = TRUE), 
+            high = quantile(response_value, probs = 0.75, na.rm = TRUE),
+            explanatory = "ALL",
+            explanatory_value = factor(""),
+            .groups = "drop"
+            ) 
+
+covid_survey_summary_stats2 <- rbind(covid_survey_summary_stats_all2, covid_survey_summary_stats_by_group2)
+
+covid_survey_summary_stats2$explanatory <- factor(covid_survey_summary_stats2$explanatory,
+      levels = c("ALL", "exp_age_bin", "exp_gender", "exp_race", "exp_ethnicity", "exp_profession", "exp_already_vax", "exp_flu_vax"))
+
+```
+
+
+```{r Q4 graph with 25q and 75q}
+#| label: Q4 graph with 25 quantile and 75 quantile
+
+covid_survey_summary_stats2 |>
+  ggplot(aes(x = mean, y = explanatory_value)) +
+  geom_errorbar(aes(xmin = low, xmax = high), width = 0.5) + #from documentation
+  geom_point(size = 1) +
+  facet_grid(cols = vars(response), 
+             rows = vars(explanatory), 
+             scales = "free_y", 
+             space = "free_y",
+             labeller = labeller(explanatory = as_labeller(id_info, default = label_wrap_gen(width = 10)),
+                                 response = as_labeller(questions, default = label_wrap_gen(width = 14))
+                                 )) +
+  labs(
+    x = "Mean Likert score \n (Error bars range from 10th to 90th percentile)",
+    y = NULL
+  ) +
+  scale_y_discrete(expand = c(0.1, 0.3)) + #*
+  theme_bw() +
+  theme(
+    strip.text.x = element_text(size = 8, lineheight = 0.8),
+    strip.text.y = element_text(size = 8, lineheight = 0.8, angle = 0),
+    panel.grid = element_blank(),
+    panel.border = element_blank(),
+    axis.ticks = element_blank(),
+    axis.title.x = element_text(size = 8),
+    axis.text.y = element_text(size = 8),
+    axis.text.x = element_text(size = 8)
+  )
+```
+
 ## 5 - COVID survey - another view
+
+
