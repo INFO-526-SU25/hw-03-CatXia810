@@ -5,6 +5,10 @@ format:
   html:
     embed-resources: true
 toc: true
+execute:
+  warning: false
+  error: false
+  message: false
 ---
 
 ## 1 - Du Bois challenge.
@@ -15,7 +19,7 @@ toc: true
 if (!require("pacman"))
   install.packages("pacman")
 
-pacman::p_load(tidyverse, here, glue, scales, janitor, forcats, ggrepel)
+pacman::p_load(tidyverse, here, glue, scales, janitor, forcats, ggrepel, ggpubr, jpeg)
 
 ggplot2::theme_set(ggplot2::theme_minimal())
 options(width = 65)
@@ -29,13 +33,16 @@ knitr::opts_chunk$set(
 
 ```
 
-```{r load data}
-#| label: load data
+```{r  Q1 load data}
+#| label: Q1 load data
 
 income <- read.csv(here("data", "income.csv"))
 income <- clean_names(income)
 glimpse(income)
+
+paper_image <- readJPEG(here("images", "paper-4182513_1280.jpg"))
 ```
+
 ```{r du bois data wrangling}
 #| label: du bois data wrangling
 
@@ -55,13 +62,16 @@ income_clean$class <- fct_relevel(
   "$100-200"
 )
 
+#adds the percent for the label on each bar
+income_clean <- income_clean |>
+  mutate("percent" = percent(amount/average_income, accuracy = 1))
+
 #changes the order so it better adheres to the original graph
 income_clean$spending_type <- fct_relevel(
   income_clean$spending_type,
   "other", "tax", "clothes", "food", "rent"
 )
 ```
-
 
 ```{r du bois recreation}
 #| label: du bois recreation
@@ -70,23 +80,45 @@ income_clean$spending_type <- fct_relevel(
 income_clean |>
   ggplot(aes(x = class, y = amount, fill = spending_type, order = spending_type)) +
   
+ #Background image on the graph itself. Wasn't able to figure out how to get the background image to the whole graph
+  background_image(paper_image) + #*
+  
   #creates a bar graph where the y values are given by their identity
-  geom_bar(stat = "identity", position = "fill") +
+  geom_bar(stat = "identity", position = "stack") +
+  
+  #creates the percent labels
+  geom_text(aes(label = percent), position = position_stack(vjust = 0.5), size = 4) +
   
   #flips the graph sideways
   coord_flip() +
   
   #colored with values closer to the original, though more saturated for ease of differentiation
-  scale_fill_manual(values = c("grey","lightblue","pink", "#966FD6", "grey10")) 
+  scale_fill_manual(values = c("grey","lightblue","pink", "#966FD6", "grey30")) +
+  
+  labs(
+    title = "Income and Expenditure of 150 N*gro Families in Atlanta.GA.U.S.A",
+    x = NULL,
+    y = NULL,
+    fill = "Anual Expenditure For"
+  ) +
+  theme(
+    legend.position = "top",
+    axis.ticks = element_blank(),
+    axis.text.x = element_blank(),
+    panel.grid = element_blank()
+  ) 
 
 ```
 
+\*<https://stackoverflow.com/questions/51255832/how-to-add-an-image-on-ggplot-background-not-the-panel>
+
+Apologies, the graph is somewhat incomplete and not at all polished. I ran into a lot of bugs and now I am out of time.
 
 ## 2 - COVID survey - interpret
 
-This graph is showing the the answers for each of the 6 questions regarding vaccines ("Vaccines are safe", "Vaccines make me feel safer at work", "Concern over Vaccine Side Effects", "Vaccine vetting process confidence", "vaccine information is trustworthy", and "I recommend the vaccine") for different identities from Age, Gender, Race, Ethnicity, Profession, or any prior vaccine experience for Covid and/or the flu. Starting from the top, for All data, most people tend to strongly agree on all questions regarding the vaccine except for "side effects" which is neutral. For age, there seems to be a trend where older people (>30) are more likely to believe in the vaccine and are closer to 1. Surprisingly, there was not a huge difference in gender across the 4 different options, with the exception of Non-binary, where the vaccine was more likely to be believed as less safe but also more likely to not be as concerned about the side effects as male or female respondents. As race goes, Native Hawaiian/Pacific Islander and White respondents are more likely to have doubts about the vaccine. Both Hispanic and non-hispanic respondents were fairly equal. Surprisingly, nursing and medical professions had concerns over the side effects of the vaccine at a higher level than a good portion of the other population. Additionally, those who had had the vaccine were more wary of side effects, but those who haven't were much more generally doubtful, for both the COVID and Flu vaccine. Across the board, the question on vaccine safety and side effects garnered more varied responses than the others (much smaller error bars).
+This graph is showing the the answers for each of the 6 questions regarding vaccines ("Vaccines are safe", "Vaccines make me feel safer at work", "Concern over Vaccine Side Effects", "Vaccine vetting process confidence", "vaccine information is trustworthy", and "I recommend the vaccine") for different identities from Age, Gender, Race, Ethnicity, Profession, or any prior vaccine experience for Covid and/or the flu. Starting from the top, for All data, most people tend to strongly agree on all questions regarding the vaccine except for "side effects" which is neutral. For age, there seems to be a trend where older people (\>30) are more likely to believe in the vaccine and are closer to 1. Surprisingly, there was not a huge difference in gender across the 4 different options, with the exception of Non-binary, where the vaccine was more likely to be believed as less safe but also more likely to not be as concerned about the side effects as male or female respondents. As race goes, Native Hawaiian/Pacific Islander and White respondents are more likely to have doubts about the vaccine. Both Hispanic and non-hispanic respondents were fairly equal. Surprisingly, nursing and medical professions had concerns over the side effects of the vaccine at a higher level than a good portion of the other population. Additionally, those who had had the vaccine were more wary of side effects, but those who haven't were much more generally doubtful, for both the COVID and Flu vaccine. Across the board, the question on vaccine safety and side effects garnered more varied responses than the others (much smaller error bars).
 
-From my initial response, I agree with the graph in that those who haven't had vaccines this year are more likely to express higher levels of doubt around the covid vaccine for Flu and Covid. My intuition disagrees with the Nursing and Medical professions having significant doubts about the side effects, but more specifically how there are no other professions to compare to. I could be interpreting this response incorrect, and it may be something like "the profession that gives you the vaccine", although I am unsure. Lastly, I also thought that younger people from <20 to 25 were more accepting of the vaccine and my intuition also disagrees with them having seemingly some of the greater concerns regarding the safety and side effects.
+From my initial response, I agree with the graph in that those who haven't had vaccines this year are more likely to express higher levels of doubt around the covid vaccine for Flu and Covid. My intuition disagrees with the Nursing and Medical professions having significant doubts about the side effects, but more specifically how there are no other professions to compare to. I could be interpreting this response incorrect, and it may be something like "the profession that gives you the vaccine", although I am unsure. Lastly, I also thought that younger people from \<20 to 25 were more accepting of the vaccine and my intuition also disagrees with them having seemingly some of the greater concerns regarding the safety and side effects.
 
 ## 3 - COVID survey - reconstruct
 
@@ -96,6 +128,7 @@ From my initial response, I agree with the graph in that those who haven't had v
 covid <- read.csv(here("data", "covid-survey.csv"), skip = 1)
 dim(covid)
 ```
+
 ```{r Q3 Data cleaning}
 #| label: Q3 Data Cleaning
 
@@ -106,7 +139,8 @@ covid <- covid |>
   filter(if_any(-1, ~ !is.na(.))) #*
 dim(covid)
 ```
-* Code after consulting with https://www.tidyverse.org/blog/2021/02/dplyr-1-0-4-if-any/. -1 from my own code, '~ !is.na(.)' formatting consulted from AI after multiple bug issues.
+
+-   \*Code after consulting with https://www.tidyverse.org/blog/2021/02/dplyr-1-0-4-if-any/. -1 from my own code, '\~ !is.na(.)' formatting consulted from AI after multiple bug issues.
 
 ```{r Q3 renaming variables}
 #| label: renaming variables
@@ -153,7 +187,8 @@ covid_survey <- covid |>
 
 dim(covid_survey)
 ```
-* http://www.cookbook-r.com/Manipulating_data/Changing_the_order_of_levels_of_a_factor/
+
+-   \*http://www.cookbook-r.com/Manipulating_data/Changing_the_order_of_levels_of_a_factor/
 
 ```{r pivot longer Q3 code given}
 #| label: pivot longer Q3 code given
@@ -177,6 +212,7 @@ covid_survey_longer <- covid_survey |>
   )
 glimpse(covid_survey_longer)
 ```
+
 The first pivot longer is taking all the explanatory values (ie background info) and putting it in explanatory_value while the second pivot longer is taking all the response and putting them under response_value.
 
 ```{r Q3 grouping}
@@ -194,8 +230,8 @@ covid_survey_summary_stats_by_group <- covid_survey_summary_stats_by_group[order
 
 glimpse(covid_survey_summary_stats_by_group)
 ```
-*https://www.tidyverse.org/blog/2020/03/dplyr-1-0-0-summarise/
-**https://bookdown.org/ndphillips/YaRrr/order-sorting-data.html 
+
+\*https://www.tidyverse.org/blog/2020/03/dplyr-1-0-0-summarise/ \*\*https://bookdown.org/ndphillips/YaRrr/order-sorting-data.html
 
 ```{r Q3 summary not grouped}
 #| label: summary not grouped Q3
@@ -223,7 +259,7 @@ covid_survey_summary_stats <- rbind(covid_survey_summary_stats_all, covid_survey
 covid_survey_summary_stats
 ```
 
-*https://www.datacamp.com/doc/r/merging 
+\*https://www.datacamp.com/doc/r/merging
 
 ```{r specifing the order of explanatory for easier faceting + facet titles}
 #| label: specifying order of explanatory row for easier faceting + facet titles
@@ -250,7 +286,6 @@ id_info <- c("ALL" = "All",
              "exp_already_vax" = "Had COVID vaccine", 
              "exp_flu_vax" = "Had flu vaccine this year")
 ```
-
 
 ```{r Q3 recreating the graph}
 #| label: recreating the graph for Q2
@@ -301,7 +336,8 @@ covid_survey_summary_stats |>
     axis.text.x = element_text(size = 8)
   )
 ```
-* https://stackoverflow.com/questions/15400486/change-distance-between-x-axis-ticks-in-ggplot2 
+
+-   \*https://stackoverflow.com/questions/15400486/change-distance-between-x-axis-ticks-in-ggplot2
 
 ## 4 - COVID survey - re-reconstruct
 
@@ -333,7 +369,6 @@ covid_survey_summary_stats2$explanatory <- factor(covid_survey_summary_stats2$ex
       levels = c("ALL", "exp_age_bin", "exp_gender", "exp_race", "exp_ethnicity", "exp_profession", "exp_already_vax", "exp_flu_vax"))
 
 ```
-
 
 ```{r Q4 graph with 25q and 75q}
 #| label: Q4 graph with 25 quantile and 75 quantile
@@ -368,6 +403,7 @@ covid_survey_summary_stats2 |>
     axis.text.x = element_text(size = 8)
   )
 ```
+
 The graph with 25th and 75th quartile error bars reaffirms that safety of the vaccine and vaccine side effects have the greatest diversity of answers, while the other ones tend to be much closer to 1 or 2, meaning people approved of the vaccine more in those areas. The differences in Age also seem to be diminished with the smaller quartiles as well as the differences in Nursing and Medical. The differences between having taken or not taken the COVID vaccine are still quite distinct, which makes sense, but the differences in Flu vaccine got smaller.
 
 ## 5 - COVID survey - another view
@@ -389,10 +425,11 @@ resp_only <- covid_response |>
 resp_only <- na.omit(resp_only) #**
 
 ```
-*https://www.datacamp.com/tutorial/subsets-in-r
-**https://bookdown.org/rwnahhas/IntroToR/exclude-observations-with-missing-data.html 
 
-The Code chunk below and the diverging graph it generates was done following the guide made by https://rfortherestofus.com/2021/10/diverging-bar-chart 
+\*https://www.datacamp.com/tutorial/subsets-in-r \*\*https://bookdown.org/rwnahhas/IntroToR/exclude-observations-with-missing-data.html
+
+The Code chunk below and the diverging graph it generates was done following the guide made by https://rfortherestofus.com/2021/10/diverging-bar-chart
+
 ```{r Digerging graph data wrangling new variables}
 
 #Creates a dataframe that calculates the number of occurances per score and the percent of the question it makes up
@@ -424,7 +461,6 @@ resp_diverging <- resp_only_sum |>
 
 glimpse(resp_diverging)
 ```
-
 
 ```{r divering graph, graphed}
 
@@ -464,8 +500,8 @@ resp_diverging|>
     legend.position = "top"
   ) 
 ```
-A. Image of a graph titled, "Percent response to COVID vaccine Questions that looks at the percent breakdown of scores (out of five, where one is strongly agree and 5 is strongly disagree) for six questions centered around the covid vaccine. The first question, "I will recommend the vaccine to family, friends, and community members", has 88% of respondents strongly agreeing, while the other responses were relatively equal. The second question, "I trust the information that I have recieved about the vaccine", has 77% of respondents strongly agreeing and 21% agreeing. After that, the disagree and neutral categories were slightly more than the disagree respondents, although the three make up very little of the percentage. The third question is "I am confident in the scientific vetting process for the new COVID vaccines" which has a 61% strongly agree, 14% agree, and a 17% strongly disagree, with the other two responses both being at 4%. The fourth question, "I am concerned about the safety and side effects of the vaccine" has 81% strongly agree, 10% agree, and minimal percent from the other responses. The fifth question, "Getting the vaccine will make me feel safer at work", has a 70% strongly agree, 23% agree, and minimal percentage for the other three. Lastly, the sixth question, "Based on my understanding, I believe the vaccine is safe", shows a significant deviation from the other questions, with 31% disagreeing, 24% agreeing, 22% strongly disagreeing, and only 12% strongly agreeing, leaving neutral responses at 11%. Ultimately, this graph highlights how most questions have respondents strongly agreeing, except for the question on vaccine safety, which is mixed, but tends slightly towards disagree.
 
+**A.** Image of a graph titled, "Percent response to COVID vaccine Questions that looks at the percent breakdown of scores (out of five, where one is strongly agree and 5 is strongly disagree) for six questions centered around the covid vaccine. The first question, "I will recommend the vaccine to family, friends, and community members", has 88% of respondents strongly agreeing, while the other responses were relatively equal. The second question, "I trust the information that I have recieved about the vaccine", has 77% of respondents strongly agreeing and 21% agreeing. After that, the disagree and neutral categories were slightly more than the disagree respondents, although the three make up very little of the percentage. The third question is "I am confident in the scientific vetting process for the new COVID vaccines" which has a 61% strongly agree, 14% agree, and a 17% strongly disagree, with the other two responses both being at 4%. The fourth question, "I am concerned about the safety and side effects of the vaccine" has 81% strongly agree, 10% agree, and minimal percent from the other responses. The fifth question, "Getting the vaccine will make me feel safer at work", has a 70% strongly agree, 23% agree, and minimal percentage for the other three. Lastly, the sixth question, "Based on my understanding, I believe the vaccine is safe", shows a significant deviation from the other questions, with 31% disagreeing, 24% agreeing, 22% strongly disagreeing, and only 12% strongly agreeing, leaving neutral responses at 11%. Ultimately, this graph highlights how most questions have respondents strongly agreeing, except for the question on vaccine safety, which is mixed, but tends slightly towards disagree.
 
 ```{r Not Diverging graph}
 #code below is the same as above except it uses the prior dataframe before all the scores were made postive or negative
@@ -494,6 +530,7 @@ resp_only_sum|>
     legend.position = "top"
   ) 
 ```
-B. Image of a graph titled, "Percent response to COVID vaccine Questions that looks at the percent breakdown of scores (out of five, where one is strongly agree and 5 is strongly disagree) for six questions centered around the covid vaccine. Unlike the previous graph, which is centered on neutral response, this graph is more concerned with the comparison of percentages for each score response per question. It highlights how each score differs and by how much, for example, strongly agreeing going from around 88% to 12% or agreeing varying between 7% and 24%. The rest of the values are the same for each question and those values are repeated from the ID above as follows: The first question, "I will recommend the vaccine to family, friends, and community members", has 88% of respondents strongly agreeing, while the other responses were relatively equal. The second question, "I trust the information that I have recieved about the vaccine", has 77% of respondents strongly agreeing and 21% agreeing. After that, the disagree and neutral categories were slightly more than the disagree respondents, although the three make up very little of the percentage. The third question is "I am confident in the scientific vetting process for the new COVID vaccines" which has a 61% strongly agree, 14% agree, and a 17% strongly disagree, with the other two responses both being at 4%. The fourth question, "I am concerned about the safety and side effects of the vaccine" has 81% strongly agree, 10% agree, and minimal percent from the other responses. The fifth question, "Getting the vaccine will make me feel safer at work", has a 70% strongly agree, 23% agree, and minimal percentage for the other three. Lastly, the sixth question, "Based on my understanding, I believe the vaccine is safe", shows a significant deviation from the other questions, with 31% disagreeing, 24% agreeing, 22% strongly disagreeing, and only 12% strongly agreeing, leaving neutral responses at 11%. 
 
-C. The graphs in a and b differ in that graph a is able to allow the view to better compare between responses (negative responses together and positive responses together). On the other hand, graph b allows the viewer to compare the percent makeup of each answer and which ones score more positive overall, and if not, how they break down.
+**B.** Image of a graph titled, "Percent response to COVID vaccine Questions that looks at the percent breakdown of scores (out of five, where one is strongly agree and 5 is strongly disagree) for six questions centered around the covid vaccine. Unlike the previous graph, which is centered on neutral response, this graph is more concerned with the comparison of percentages for each score response per question. It highlights how each score differs and by how much, for example, strongly agreeing going from around 88% to 12% or agreeing varying between 7% and 24%. The rest of the values are the same for each question and those values are repeated from the ID above as follows: The first question, "I will recommend the vaccine to family, friends, and community members", has 88% of respondents strongly agreeing, while the other responses were relatively equal. The second question, "I trust the information that I have recieved about the vaccine", has 77% of respondents strongly agreeing and 21% agreeing. After that, the disagree and neutral categories were slightly more than the disagree respondents, although the three make up very little of the percentage. The third question is "I am confident in the scientific vetting process for the new COVID vaccines" which has a 61% strongly agree, 14% agree, and a 17% strongly disagree, with the other two responses both being at 4%. The fourth question, "I am concerned about the safety and side effects of the vaccine" has 81% strongly agree, 10% agree, and minimal percent from the other responses. The fifth question, "Getting the vaccine will make me feel safer at work", has a 70% strongly agree, 23% agree, and minimal percentage for the other three. Lastly, the sixth question, "Based on my understanding, I believe the vaccine is safe", shows a significant deviation from the other questions, with 31% disagreeing, 24% agreeing, 22% strongly disagreeing, and only 12% strongly agreeing, leaving neutral responses at 11%.
+
+**C.** The graphs in a and b differ in that graph a is able to allow the view to better compare between responses (negative responses together and positive responses together). On the other hand, graph b allows the viewer to compare the percent makeup of each answer and which ones score more positive overall, and if not, how they break down.
