@@ -206,7 +206,7 @@ covid_survey_summary_stats_all <- covid_survey_longer |>
   summarise(mean = mean(response_value, na.rm = TRUE),
             low = quantile(response_value, probs = 0.1, na.rm = TRUE), 
             high = quantile(response_value, probs = 0.9, na.rm = TRUE),
-            explanatory = "ALL",
+            explanatory = "ALL", #code inspired from discussion in HW channel
             explanatory_value = factor(""),
             .groups = "drop"
             ) 
@@ -224,6 +224,7 @@ covid_survey_summary_stats
 ```
 
 *https://www.datacamp.com/doc/r/merging 
+
 ```{r specifing the order of explanatory for easier faceting + facet titles}
 #| label: specifying order of explanatory row for easier faceting + facet titles
 
@@ -256,13 +257,24 @@ id_info <- c("ALL" = "All",
 
 
 covid_survey_summary_stats |>
+  #maps mean to explanatory value
   ggplot(aes(x = mean, y = explanatory_value)) +
+  
+  #creates the error bars for each point with the ends at the 10 and 90 quartile
   geom_errorbar(aes(xmin = low, xmax = high), width = 0.5) + #from documentation
+  
+  #creates the datapoint for each response
   geom_point(size = 1) +
+  
+  #facets based on reponse and explanatory
   facet_grid(cols = vars(response), 
              rows = vars(explanatory), 
+             
+             #"free_y" allows for the explanatory values on Y to be for the whole graph and not smushed in the facet of explanatory
              scales = "free_y", 
              space = "free_y",
+             
+             #takes the labels created above and maps them to each of the variables
              labeller = labeller(explanatory = as_labeller(id_info, default = label_wrap_gen(width = 10)),
                                  response = as_labeller(questions, default = label_wrap_gen(width = 14))
                                  )) +
@@ -270,8 +282,14 @@ covid_survey_summary_stats |>
     x = "Mean Likert score \n (Error bars range from 10th to 90th percentile)",
     y = NULL
   ) +
+  
+  #attempt to better space out the y axis but not quite there
   scale_y_discrete(expand = c(0.1, 0.3)) + #*
+  
+  #theme with the grey boxes for facets
   theme_bw() +
+  
+  #changes the texts size and gets rid of all the grid elements
   theme(
     strip.text.x = element_text(size = 8, lineheight = 0.8),
     strip.text.y = element_text(size = 8, lineheight = 0.8, angle = 0),
@@ -290,6 +308,7 @@ covid_survey_summary_stats |>
 ```{r Q4 recreate summary stats}
 #| label: Q4 recreate summary stats
 
+#only change is that the low and high values are the 25 and 75th quantile respectively
 covid_survey_summary_stats_by_group2 <- covid_survey_longer |>
   group_by(explanatory, explanatory_value, response) |>
   summarise(mean = mean(response_value, na.rm = TRUE),
@@ -318,6 +337,8 @@ covid_survey_summary_stats2$explanatory <- factor(covid_survey_summary_stats2$ex
 
 ```{r Q4 graph with 25q and 75q}
 #| label: Q4 graph with 25 quantile and 75 quantile
+
+#same code as above but with the new dataframe with the 25th and 75th quantile values
 
 covid_survey_summary_stats2 |>
   ggplot(aes(x = mean, y = explanatory_value)) +
@@ -351,8 +372,12 @@ The graph with 25th and 75th quartile error bars reaffirms that safety of the va
 
 ## 5 - COVID survey - another view
 
-```{r}
+```{r Q5 clean data}
+
+#creates a dataframe with the irrelevant rows removed
 covid_response <- covid_survey[, c(9, 10, 11, 12, 13, 14)] #*
+
+#pivots so the questions and scores are the only two columns
 resp_only <- covid_response |>
   pivot_longer(
     cols = starts_with("resp"),
@@ -360,6 +385,7 @@ resp_only <- covid_response |>
     values_to = "score",
   )
 
+#did not fix the NA values earlier so came back to fix them here
 resp_only <- na.omit(resp_only) #**
 
 ```
@@ -367,42 +393,70 @@ resp_only <- na.omit(resp_only) #**
 **https://bookdown.org/rwnahhas/IntroToR/exclude-observations-with-missing-data.html 
 
 The Code chunk below and the diverging graph it generates was done following the guide made by https://rfortherestofus.com/2021/10/diverging-bar-chart 
-```{r}
+```{r Digerging graph data wrangling new variables}
+
+#Creates a dataframe that calculates the number of occurances per score and the percent of the question it makes up
 resp_only_sum <- resp_only |>
+  
+  #groups by each question and each score
   group_by(question, score) %>%
+  
+  #counts the occurances and stores in n_answers
   count(name = "n_answers") |>
+  
+  #then group by questions to get the total sum of each question
   group_by(question) |>
+  
+  #creates a new column that gives the percent that each score makes up
   mutate(percent_answers = n_answers/sum(n_answers)) |>
   ungroup() |>
+  
+  #creates a new column where the percent gets transformed into a percent value
   mutate(percent_answers_label = percent(percent_answers, accuracy = 1),
          score_fill = as.character(score))
 
+#creates a new dataframe for the diverging that classifies the lower values as postive and the higher values as negative, with 3 being 0
 resp_diverging <- resp_only_sum |>
+  #creates the column where 3 and lower are pos, 4 and higher are negative
   mutate(percent_answers_neg = if_else(score <=3, percent_answers, -percent_answers)) |>
+  #creates the label so that it is not negative
   mutate(percent_answers_label = percent(percent_answers, accuracy = 1))
-resp_diverging
+
+glimpse(resp_diverging)
 ```
 
 
-```{r}
+```{r divering graph, graphed}
+
+
 resp_diverging|>
+  #assigns x to each question anticipating that the coordinates will be flipped so that eventually it will be on the vertical
   ggplot(aes(x = question, y = percent_answers_neg, fill = score_fill)) +
+  
+  #creates the bar graph
   geom_col() +
   
   #unable to get the text below to work without being on top of each other
   geom_text(aes(label = percent_answers_label),
             position = position_stack(vjust = 0.5)) +
   
+  #flips the graph
   coord_flip() +
   theme_minimal() +
+  
+  #assigns green for positive connotations and red for negative connotations.
   scale_fill_manual(values = c("#30c878", "#7CFC00", "skyblue", "#D2042D", "#953553")) +
+  
+  #wraps the text for each question for readability
   scale_x_discrete(labels = label_wrap(25)(questions)) +
+  
   labs(
     title = "Percent response to COVID Vaccine Questions",
     y = "Score",
     x = NULL,
     fill = "Score Out of 5:") +
-  theme_minimal() +
+  
+  #deletes all the unnecessary graph elements
   theme(
     panel.grid = element_blank(),
     axis.ticks = element_blank(),
@@ -410,8 +464,11 @@ resp_diverging|>
     legend.position = "top"
   ) 
 ```
+A. Image of a graph titled, "Percent response to COVID vaccine Questions that looks at the percent breakdown of scores (out of five, where one is strongly agree and 5 is strongly disagree) for six questions centered around the covid vaccine. The first question, "I will recommend the vaccine to family, friends, and community members", has 88% of respondents strongly agreeing, while the other responses were relatively equal. The second question, "I trust the information that I have recieved about the vaccine", has 77% of respondents strongly agreeing and 21% agreeing. After that, the disagree and neutral categories were slightly more than the disagree respondents, although the three make up very little of the percentage. The third question is "I am confident in the scientific vetting process for the new COVID vaccines" which has a 61% strongly agree, 14% agree, and a 17% strongly disagree, with the other two responses both being at 4%. The fourth question, "I am concerned about the safety and side effects of the vaccine" has 81% strongly agree, 10% agree, and minimal percent from the other responses. The fifth question, "Getting the vaccine will make me feel safer at work", has a 70% strongly agree, 23% agree, and minimal percentage for the other three. Lastly, the sixth question, "Based on my understanding, I believe the vaccine is safe", shows a significant deviation from the other questions, with 31% disagreeing, 24% agreeing, 22% strongly disagreeing, and only 12% strongly agreeing, leaving neutral responses at 11%. Ultimately, this graph highlights how most questions have respondents strongly agreeing, except for the question on vaccine safety, which is mixed, but tends slightly towards disagree.
 
-```{r}
+
+```{r Not Diverging graph}
+#code below is the same as above except it uses the prior dataframe before all the scores were made postive or negative
 resp_only_sum|>
   ggplot(aes(x = question, y = percent_answers, fill = score_fill)) +
   geom_col() +
@@ -437,4 +494,6 @@ resp_only_sum|>
     legend.position = "top"
   ) 
 ```
+B. Image of a graph titled, "Percent response to COVID vaccine Questions that looks at the percent breakdown of scores (out of five, where one is strongly agree and 5 is strongly disagree) for six questions centered around the covid vaccine. Unlike the previous graph, which is centered on neutral response, this graph is more concerned with the comparison of percentages for each score response per question. It highlights how each score differs and by how much, for example, strongly agreeing going from around 88% to 12% or agreeing varying between 7% and 24%. The rest of the values are the same for each question and those values are repeated from the ID above as follows: The first question, "I will recommend the vaccine to family, friends, and community members", has 88% of respondents strongly agreeing, while the other responses were relatively equal. The second question, "I trust the information that I have recieved about the vaccine", has 77% of respondents strongly agreeing and 21% agreeing. After that, the disagree and neutral categories were slightly more than the disagree respondents, although the three make up very little of the percentage. The third question is "I am confident in the scientific vetting process for the new COVID vaccines" which has a 61% strongly agree, 14% agree, and a 17% strongly disagree, with the other two responses both being at 4%. The fourth question, "I am concerned about the safety and side effects of the vaccine" has 81% strongly agree, 10% agree, and minimal percent from the other responses. The fifth question, "Getting the vaccine will make me feel safer at work", has a 70% strongly agree, 23% agree, and minimal percentage for the other three. Lastly, the sixth question, "Based on my understanding, I believe the vaccine is safe", shows a significant deviation from the other questions, with 31% disagreeing, 24% agreeing, 22% strongly disagreeing, and only 12% strongly agreeing, leaving neutral responses at 11%. 
+
 C. The graphs in a and b differ in that graph a is able to allow the view to better compare between responses (negative responses together and positive responses together). On the other hand, graph b allows the viewer to compare the percent makeup of each answer and which ones score more positive overall, and if not, how they break down.
